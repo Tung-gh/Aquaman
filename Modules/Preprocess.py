@@ -59,14 +59,6 @@ def load_data(data_path, num_aspects):
     return inputs, outputs
 
 
-def make_corpus(inputs):
-    corpus = []
-    for ip in inputs:
-        corpus.append(ip.text)
-
-    return corpus
-
-
 def preprocess_inputs(inputs):
     for ip in inputs:
         text = ip.text.strip().replace('_', ' ').split(' ')
