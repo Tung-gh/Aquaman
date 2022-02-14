@@ -1,14 +1,14 @@
 import sys
 
-from Modules.Preprocess import load_data
+from Modules.Preprocess import load_data, preprocess_inputs, make_vocab
 
 datasets = {'mebeshopee': [6, 0],
               'mebetiki': [6, 1],
               'techshopee': [8, 2],
               'techtiki': [8, 3] }
 data_paths = [
-    r"H:\DS&KT Lab\NCKH\OpinionMining\data_mebe\mebe_shopee.csv",
-    r"H:\DS&KT Lab\NCKH\OpinionMining\data_mebe\mebe_tiki.csv"
+    r"H:\DS&KT Lab\NCKH\OpinionMining\data_mebe\mebeshopee.csv",
+    r"H:\DS&KT Lab\NCKH\OpinionMining\data_mebe\mebetiki.csv"
 ]
 
 
@@ -20,5 +20,12 @@ if __name__ == '__main__':
     else:
         data_path = data_paths[datasets[set][1]]
         num_aspects = datasets[set][0]
+        #Load inputs, outputs from data file
+        inputs, outputs = load_data(data_path, num_aspects)     #2086 samples, 2086 samples
+        #Preprocess the inputs data
+        inputs = preprocess_inputs(inputs)
+        #Make a vocabulary from the inputs data
+        vocab = make_vocab(inputs)                              #1138 words
 
-        inputs, outputs = load_data(data_path, num_aspects)
+        print(inputs[0].text)
+

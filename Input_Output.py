@@ -5,9 +5,9 @@
 # class Token:
 
 class Input:
-    def __init__(self, text):
+    def __init__(self, text, annotations):
         self.text = text
-
+        self.annotations = annotations
 
 class Output:
     def __init__(self, aspects, scores):
