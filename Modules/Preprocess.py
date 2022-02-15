@@ -63,10 +63,10 @@ def preprocess_inputs(inputs):
     for ip in inputs:
         text = ip.text.strip().replace('_', ' ').split(' ')
         for j in range(len(text)):
-            if contains_digit(text[j]):
+            if contains_digit(text[j].strip()):
                 text[j] = '0'
         for token in text:
-            if len(token) <= 1 or token in punctuations:
+            if len(token) <= 1 or token.strip() in punctuations:
                 text.remove(token)
         ip.text = ' '.join(text)
 

@@ -1,6 +1,6 @@
 import sys
-
-from Modules.Preprocess import load_data, make_corpus, preprocess_inputs, make_vocab
+from Modules.Preprocess import load_data, preprocess_inputs, make_vocab
+from Modules.Proposed_Models import MLP_Model
 
 datasets = {'mebeshopee': [6, 0],
               'mebetiki': [6, 1],
@@ -26,6 +26,6 @@ if __name__ == '__main__':
         inputs = preprocess_inputs(inputs)
         # Make a vocabulary from the inputs data
         vocab = make_vocab(inputs)                              #1354 words
-        print(len(vocab))
+
 
 
