@@ -10,12 +10,12 @@ punctuations = list(string.punctuation)
 useless_labels = ['295', '296', '314', '315', '329', '330', '348', '349']
 
 
-def is_nan(str):
-    return str != str
+def is_nan(s):
+    return s != s
 
 
-def contains_punctuation(str):
-    for c in str:
+def contains_punctuation(s):
+    for c in s:
         if c in punctuations:
             return True
     return False
