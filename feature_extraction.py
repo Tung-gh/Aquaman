@@ -5,7 +5,8 @@ import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
 
-def Chi2(inputs, outputs, num_aspects):
+
+def chi2(inputs, outputs, num_aspects):
     if num_aspects == 6:
         categories = ['Ship', 'Gia', 'Chinh hang', 'Chat luong', 'Dich vu', 'An toan']
     else:
@@ -37,5 +38,5 @@ def Chi2(inputs, outputs, num_aspects):
             for w, s, p in zip(df['word'], df['score'], df['pvalue']):
                 f.write('{} \t {} \t {}\n'.format(w, s, p))
 
-    return inputs, outputs
+
 

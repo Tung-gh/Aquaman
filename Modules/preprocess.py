@@ -1,5 +1,4 @@
 import sys
-import re
 import pandas as pd
 import string
 
@@ -88,3 +87,12 @@ def make_vocab(inputs):
 
     return vocab
 
+
+def load_chi2(path):
+    dictionary = {}
+    with open(r"H:\DS&KT Lab\NCKH\Aquaman\data\data_mebe\mebeshopee_chi2_dict\mebeshopee_Gia.txt", 'r', encoding='utf8') as f:
+        for line in f:
+            t = line.strip().split(' ')
+            dictionary[t[0]] = t[2]
+
+    return dictionary

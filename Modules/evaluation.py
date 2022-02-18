@@ -34,8 +34,8 @@ def cal_aspect_prf(goldens, predicts, num_aspects, verbal=False):
     macro_f1 = sum(f1)/num_aspects
 
     if verbal:
-        print('p:', p)
-        print('r:', r)
+        print('p: ', p)
+        print('r: ', r)
         print('f1:', f1)
         print('micro:', (micro_p, micro_r, micro_f1))
         print('macro:', (macro_p, macro_r, macro_f1))
