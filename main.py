@@ -33,18 +33,18 @@ if __name__ == '__main__':
 
     """ CREATE AND RUN THE MODEL """
     ips, ops = Chi2(inputs, outputs, num_aspects)
-    # Divide into train_set, test_set
-    x_tr, x_te, y_tr, y_te = train_test_split(inputs, outputs, test_size=0.2, random_state=20)
-    # Create a model variable
-    model = MLP_Model()
-    model.train(x_tr, y_tr)
-    # Predict the labels
-    predicts = model.predict(x_te)
-    # Print the results
-    if num_aspects == 6:
-        print("\t\t ship \t\t giá \t\t chính hãng \t\t chất lượng \t\t dịch vụ \t\t an toàn")
-    else:
-        print("\t\t cấu hình \t\t mẫu mã \t\t hiệu năng \t\t ship \t\t giá \t\t chính hãng \t\t dịch vụ \t\t phụ kiện")
-    cal_aspect_prf(y_te, predicts, num_aspects, verbal=True)
+    # # Divide into train_set, test_set
+    # x_tr, x_te, y_tr, y_te = train_test_split(inputs, outputs, test_size=0.2, random_state=20)
+    # # Create a model variable
+    # model = MLP_Model()
+    # model.train(x_tr, y_tr)
+    # # Predict the labels
+    # predicts = model.predict(x_te)
+    # # Print the results
+    # if num_aspects == 6:
+    #     print("\t\t Ship \t\t Gia \t\t Chinh hang \t\t Chat luong \t\t Dich vu \t\t An toan")
+    # else:
+    #     print("\t\t Cau hinh \t\t Mau ma \t\t Hieu nang \t\t Ship \t\t Gia \t\t Chinh hang \t\t Dich vu \t\t Phu kien")
+    # cal_aspect_prf(y_te, predicts, num_aspects, verbal=True)
 
 
