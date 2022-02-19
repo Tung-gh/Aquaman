@@ -1,7 +1,7 @@
 import sys
 from Modules.preprocess import load_data, preprocess_inputs, make_vocab
 from Modules.evaluation import cal_aspect_prf
-from Modules.Proposed_Models.MLP_Model import ModelMLP
+from Modules.Proposed_Models.Model_MLP import ModelMLP
 from sklearn.model_selection import train_test_split
 from feature_extraction import chi2
 
@@ -26,8 +26,8 @@ if __name__ == '__main__':
     # Preprocess the inputs data
     inputs = preprocess_inputs(inputs)
 
-    # Make a vocabulary from the inputs data
-    vocab = make_vocab(inputs)      # 1354 words
+    # # Make a vocabulary from the inputs data
+    # vocab = make_vocab(inputs)      # 1310 words
 
     """ _________________________________________________________________________________________________________ """
     # # Make chi2 dictionary for every aspect
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     CNN_embedding = ['fasttext', 'fasttext_chi2']
 
     # Call a model
-    model = ModelMLP(MLP_embedding[0])
+    model = ModelMLP(MLP_embedding[1])
     # model = ModelCNN(CNN_embedding[0])
 
     # Train model
@@ -56,5 +56,7 @@ if __name__ == '__main__':
     else:
         print("\t\t Cau hinh \t\t Mau ma \t\t Hieu nang \t\t Ship \t\t Gia \t\t Chinh hang \t\t Dich vu \t\t Phu kien")
     cal_aspect_prf(y_te, predicts, num_aspects, verbal=True)
+
+
 
 

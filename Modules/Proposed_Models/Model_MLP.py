@@ -17,11 +17,23 @@ class ModelMLP(Model):
             self.categories = ['Cau hinh','Mau ma','Hieu nang','Ship','Gia','Chinh hang','Dich vu','Phu kien']
         self.embedding = embedding
         self.vocab = []
-        with open(r"H:\DS&KT Lab\\NCKH\\Aquaman\\data\\data_mebe\\mebeshopee_vocab.txt", encoding='utf8') as f:
+        with open(r"H:\DS&KT Lab\\NCKH\\Aquaman\\data\\data_{}\\{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), encoding='utf8') as f:
             for line in f:
                 self.vocab.append(line.strip())
+        self.chi2_dict = []
+        for i in range(self.num_aspects):
+            path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
+            self.chi2_dict.append(load_chi2(path))
 
-        self.models = [tf.keras.models.Sequential() for _ in range(self.num_aspects)]
+        model = tf.keras.models.Sequential(
+            [
+                layers.Dense(256),
+                layers.BatchNormalization(),
+                layers.Activation('relu'),
+                layers.Dense(1, activation='sigmoid')
+            ]
+        )
+        self.models = [model for _ in range(self.num_aspects)]
 
     def represent_onehot(self, inputs):
         features = [[] for i in range(self.num_aspects)]
@@ -35,14 +47,12 @@ class ModelMLP(Model):
     def represent_onehot_chi2(self, inputs):
         features = [[] for i in range(self.num_aspects)]
         for i in range(self.num_aspects):
-            path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_mebe/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
-            chi2_dict = load_chi2(path)
             for ip in inputs:
-                rep = np.zeros(len(chi2_dict))
+                rep = np.zeros(len(self.chi2_dict[i]))
                 text = ip.text.split(' ')
                 for w in text:
-                    if w in chi2_dict:
-                        rep[list(chi2_dict).index(w)] = chi2_dict[w]
+                    if w in self.chi2_dict[i]:
+                        rep[list(self.chi2_dict[i]).index(w)] = self.chi2_dict[i][w]
                 features[i].append(np.array(rep))
 
         return np.array(features)
@@ -60,14 +70,6 @@ class ModelMLP(Model):
         ys = [np.array([output.scores[i] for output in outputs]) for i in range(self.num_aspects)]
 
         for i in range(self.num_aspects):
-            self.models[i].add(layers.Dense(256))
-            self.models[i].add(layers.BatchNormalization())
-            self.models[i].add(layers.Activation('relu'))
-            # self.models[i].add(layers.Dense(256))
-            # self.models[i].add(layers.BatchNormalization())
-            # self.models[i].add(layers.Activation('relu'))
-            self.models[i].add(layers.Dense(1, activation='sigmoid'))
-
             self.models[i].compile(loss='mse', optimizer='adam', metrics=['accuracy'])
             self.models[i].fit(x[i], ys[i], epochs=3, batch_size=128)
             # self.models[i].summary()

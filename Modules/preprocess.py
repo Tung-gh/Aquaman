@@ -81,7 +81,7 @@ def make_vocab(inputs):
     # Make a non-duplicated vocabulary
     vocab = list(dict.fromkeys(vocab))
 
-    with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_mebe/" + str(sys.argv[1]) + "_vocab.txt", 'w', encoding='utf8') as f:
+    with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
         for w in vocab:
             f.write('{}\n'.format(w))
 
@@ -90,9 +90,12 @@ def make_vocab(inputs):
 
 def load_chi2(path):
     dictionary = {}
-    with open(r"H:\DS&KT Lab\NCKH\Aquaman\data\data_mebe\mebeshopee_chi2_dict\mebeshopee_Gia.txt", 'r', encoding='utf8') as f:
+    with open(path, 'r', encoding='utf8') as f:
         for line in f:
             t = line.strip().split(' ')
             dictionary[t[0]] = t[2]
 
     return dictionary
+
+
+
