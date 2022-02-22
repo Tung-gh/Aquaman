@@ -1,19 +1,21 @@
 import sys
-from Modules.preprocess import load_data, preprocess_inputs, make_vocab
+from Modules.preprocess import load_data, preprocess_inputs, make_vocab, load_fasttext
 from Modules.evaluation import cal_aspect_prf
 from Modules.Proposed_Models.Model_MLP import ModelMLP
+from Modules.Proposed_Models.Model_CNN import ModelCNN
 from sklearn.model_selection import train_test_split
 from feature_extraction import chi2
 
 datasets = {'mebeshopee': [6, 0],
               'mebetiki': [6, 1],
               'techshopee': [8, 2],
-              'techtiki': [8, 3] }
+              'techtiki': [8, 3]
+            }
 data_paths = [
     r"H:\DS&KT Lab\NCKH\Aquaman\data\data_mebe\mebeshopee.csv",
     r"H:\DS&KT Lab\NCKH\Aquaman\data\data_mebe\mebetiki.csv"
-]
-
+    ]
+f_path = r"H:\DS&KT Lab\NCKH\Aquaman\vn_fasttext\cc.vi.300.vec"
 
 if __name__ == '__main__':
     argv = sys.argv[1]
@@ -29,20 +31,24 @@ if __name__ == '__main__':
     # # Make a vocabulary from the inputs data
     # vocab = make_vocab(inputs)      # 1310 words
 
+    text_len = [30, 38, 55, 52]
+
     """ _________________________________________________________________________________________________________ """
     # # Make chi2 dictionary for every aspect
     # chi2(inputs, outputs, num_aspects)
+    # Load fastText embedding
+    fasttext = load_fasttext(f_path)
 
     # Divide into train_set, test_set
-    x_tr, x_te, y_tr, y_te = train_test_split(inputs, outputs, test_size=0.2, random_state=20)
+    x_tr, x_te, y_tr, y_te = train_test_split(inputs, outputs, test_size=0.2, random_state=20)      # 1668, 418
 
     # Embedding mode for MLP, CNN model
     MLP_embedding = ['onehot', 'onehot_chi2']
-    CNN_embedding = ['fasttext', 'fasttext_chi2']
+    CNN_embedding = ['fasttext', 'fasttext_chi2_attention']
 
     # Call a model
-    model = ModelMLP(MLP_embedding[1])
-    # model = ModelCNN(CNN_embedding[0])
+    # model = ModelMLP(MLP_embedding[1])
+    model = ModelCNN(CNN_embedding[0], text_len[datasets[argv][1]], fasttext)
 
     # Train model
     model.train(x_tr, y_tr)

@@ -1,9 +1,11 @@
 import sys
+import io
 import pandas as pd
+import numpy as np
 import string
 
 from Input_Output import Input, Output
-
+from sklearn.feature_extraction.text import CountVectorizer
 
 punctuations = list(string.punctuation)
 useless_labels = ['295', '296', '314', '315', '329', '330', '348', '349']
@@ -73,6 +75,17 @@ def preprocess_inputs(inputs):
 
 
 def make_vocab(inputs):
+
+    """
+    corpus = [ip.text for ip in inputs]
+    cv = CountVectorizer()
+    x = cv.fit_transform(corpus)
+    vocab = x.get_feature_names_out()
+    with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
+        for w in vocab:
+            f.write('{}\n'.format(w))
+    """
+
     vocab = []
     for ip in inputs:
         text = ip.text.split(' ')
@@ -98,4 +111,18 @@ def load_chi2(path):
     return dictionary
 
 
+def load_fasttext(path):
+    num_words = 100000
+    fasttext = {}
+    fin = io.open(path, 'r', encoding='utf-8', newline='\n', errors='ignore')
+    i = 0
+    for line in fin:
+        i += 1
+        tokens = line.rstrip().split(' ')
+        fasttext[tokens[0]] = np.array([float(val) for val in tokens[1:]])
+        fasttext[tokens[0]] /= np.linalg.norm(fasttext[tokens[0]])
 
+        if i > num_words:
+            break
+
+    return fasttext

@@ -14,7 +14,7 @@ class ModelMLP(Model):
             self.categories = ['Ship', 'Gia', 'Chinh hang', 'Chat luong', 'Dich vu', 'An toan']
         else:
             self.num_aspects = 8
-            self.categories = ['Cau hinh','Mau ma','Hieu nang','Ship','Gia','Chinh hang','Dich vu','Phu kien']
+            self.categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
         self.embedding = embedding
         self.vocab = []
         with open(r"H:\DS&KT Lab\\NCKH\\Aquaman\\data\\data_{}\\{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), encoding='utf8') as f:
