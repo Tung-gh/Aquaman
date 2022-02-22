@@ -6,21 +6,21 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
 
 
-def chi2(inputs, outputs, num_aspects):
+def Chi2(inputs, outputs, num_aspects):
     if num_aspects == 6:
         categories = ['Ship', 'Gia', 'Chinh hang', 'Chat luong', 'Dich vu', 'An toan']
     else:
-        categories = ['Cau hinh','Mau ma','Hieu nang','Ship','Gia','Chinh hang','Dich vu','Phu kien']
+        categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
 
-    corpus = [ip.text for ip in inputs]
+    # corpus = [ip.text for ip in inputs]
 
     cv = CountVectorizer()
-    x = cv.fit_transform(corpus)
+    x = cv.fit_transform(inputs)
 
     y = []
     skb = [SelectKBest(chi2, k='all') for _ in range(num_aspects)]
     for i in range(num_aspects):
-        y.append([op.scores[i] for op in outputs])
+        y.append([op[i] for op in outputs])
         _chi2 = skb[i].fit_transform(x, y[i])
 
         feature_names = cv.get_feature_names_out()
@@ -37,6 +37,3 @@ def chi2(inputs, outputs, num_aspects):
         with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), categories[i]), 'w', encoding='utf8') as f:
             for w, s, p in zip(df['word'], df['score'], df['pvalue']):
                 f.write('{} \t {} \t {}\n'.format(w, s, p))
-
-
-

@@ -14,11 +14,11 @@ def cal_aspect_prf(goldens, predicts, num_aspects, verbal=False):
 
     for g, p in zip(goldens, predicts):
         for i in range(num_aspects):
-            if g.scores[i] == p.scores[i] == 1:
+            if g[i] == p[i] == 1:
                 tp[i] += 1
-            elif g.scores[i] == 1:
+            elif g[i] == 1:
                 fn[i] += 1
-            elif p.scores[i] == 1:
+            elif p[i] == 1:
                 fp[i] += 1
 
     p = [tp[i]/(tp[i]+fp[i]) for i in range(num_aspects)]

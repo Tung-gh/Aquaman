@@ -2,7 +2,6 @@ import sys
 import tensorflow as tf
 import numpy as np
 from Modules.models import Model
-from Input_Output import Output
 from tensorflow.keras import layers
 from Modules.preprocess import load_chi2
 
@@ -16,18 +15,21 @@ class ModelMLP(Model):
             self.num_aspects = 8
             self.categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
         self.embedding = embedding
+
         self.vocab = []
         with open(r"H:\DS&KT Lab\\NCKH\\Aquaman\\data\\data_{}\\{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), encoding='utf8') as f:
             for line in f:
                 self.vocab.append(line.strip())
+
         self.chi2_dict = []
         for i in range(self.num_aspects):
             path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
             self.chi2_dict.append(load_chi2(path))
 
+        # Create model
         model = tf.keras.models.Sequential(
             [
-                layers.Dense(256),
+                layers.Dense(512),
                 layers.BatchNormalization(),
                 layers.Activation('relu'),
                 layers.Dense(1, activation='sigmoid')
@@ -38,7 +40,7 @@ class ModelMLP(Model):
     def represent_onehot(self, inputs):
         features = [[] for i in range(self.num_aspects)]
         for ip in inputs:
-            _features = [1 if w in ip.text else 0 for w in self.vocab]
+            _features = [1 if w in ip else 0 for w in self.vocab]
             for i in range(self.num_aspects):
                 features[i].append(_features)
 
@@ -49,7 +51,7 @@ class ModelMLP(Model):
         for i in range(self.num_aspects):
             for ip in inputs:
                 rep = np.zeros(len(self.chi2_dict[i]))
-                text = ip.text.split(' ')
+                text = ip.split(' ')
                 for w in text:
                     if w in self.chi2_dict[i]:
                         rep[list(self.chi2_dict[i]).index(w)] = self.chi2_dict[i][w]
@@ -67,7 +69,7 @@ class ModelMLP(Model):
             x = self.represent_onehot(inputs)
         else:
             x = self.represent_onehot_chi2(inputs)
-        ys = [np.array([output.scores[i] for output in outputs]) for i in range(self.num_aspects)]
+        ys = [np.array([output[i] for output in outputs]) for i in range(self.num_aspects)]
 
         for i in range(self.num_aspects):
             self.models[i].compile(loss='mse', optimizer='adam', metrics=['accuracy'])
@@ -88,9 +90,8 @@ class ModelMLP(Model):
         outputs = []
         predicts = [self.models[i].predict_classes(x[i]) for i in range(self.num_aspects)]
         for ps in zip(*predicts):
-            aspects = list(range(self.num_aspects))
             scores = list(ps)
-            outputs.append(Output(aspects, scores))
+            outputs.append(scores)
 
         return outputs
 

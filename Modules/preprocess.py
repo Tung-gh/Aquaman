@@ -60,43 +60,47 @@ def load_data(data_path, num_aspects):
     return inputs, outputs
 
 
-def preprocess_inputs(inputs):
-    for ip in inputs:
+def preprocess_inputs(inputs, outputs, text_len):
+    inp, outp = [], []
+    for ip, op in zip(inputs, outputs):
         text = ip.text.strip().replace('_', ' ').split(' ')
-        for j in range(len(text)):
-            if contains_digit(text[j].strip()):
-                text[j] = '0'
-        for token in text:
-            if len(token) <= 1 or token.strip() in punctuations:
-                text.remove(token)
-        ip.text = ' '.join(text)
+        if len(text) <= text_len:
+            for j in range(len(text)):
+                if contains_digit(text[j].strip()):
+                    text[j] = '0'
+            for token in text:
+                if len(token) <= 1 or token.strip() in punctuations:
+                    text.remove(token)
+            ip.text = ' '.join(text)
+            inp.append(ip.text)
+            outp.append(op.scores)
 
-    return inputs
+    return inp, outp
 
 
 def make_vocab(inputs):
 
-    """
-    corpus = [ip.text for ip in inputs]
+    # """
+    # corpus = [ip.text for ip in inputs]
     cv = CountVectorizer()
-    x = cv.fit_transform(corpus)
-    vocab = x.get_feature_names_out()
+    x = cv.fit_transform(inputs)
+    vocab = cv.get_feature_names_out()
     with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
         for w in vocab:
             f.write('{}\n'.format(w))
-    """
+    # """
 
-    vocab = []
-    for ip in inputs:
-        text = ip.text.split(' ')
-        for token in text:
-            vocab.append(token)
-    # Make a non-duplicated vocabulary
-    vocab = list(dict.fromkeys(vocab))
-
-    with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
-        for w in vocab:
-            f.write('{}\n'.format(w))
+    # vocab = []
+    # for ip in inputs:
+    #     text = ip.text.split(' ')
+    #     for token in text:
+    #         vocab.append(token)
+    # # Make a non-duplicated vocabulary
+    # vocab = list(dict.fromkeys(vocab))
+    #
+    # with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
+    #     for w in vocab:
+    #         f.write('{}\n'.format(w))
 
     return vocab
 
