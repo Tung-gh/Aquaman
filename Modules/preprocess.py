@@ -81,7 +81,6 @@ def preprocess_inputs(inputs, outputs, text_len):
 def make_vocab(inputs):
 
     # """
-    # corpus = [ip.text for ip in inputs]
     cv = CountVectorizer()
     x = cv.fit_transform(inputs)
     vocab = cv.get_feature_names_out()
@@ -110,7 +109,7 @@ def load_chi2(path):
     with open(path, 'r', encoding='utf8') as f:
         for line in f:
             t = line.strip().split(' ')
-            dictionary[t[0]] = t[2]
+            dictionary[t[0]] = float(t[2])
 
     return dictionary
 

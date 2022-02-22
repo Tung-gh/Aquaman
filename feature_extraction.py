@@ -12,8 +12,6 @@ def Chi2(inputs, outputs, num_aspects):
     else:
         categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
 
-    # corpus = [ip.text for ip in inputs]
-
     cv = CountVectorizer()
     x = cv.fit_transform(inputs)
 
