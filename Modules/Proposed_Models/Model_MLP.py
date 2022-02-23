@@ -31,8 +31,8 @@ class ModelMLP(Model):
         model = tf.keras.models.Sequential(
             [
                 layers.Dense(512),
-                layers.BatchNormalization(),
                 layers.Activation('relu'),
+                layers.BatchNormalization(),
                 layers.Dense(1, activation='sigmoid')
             ]
         )

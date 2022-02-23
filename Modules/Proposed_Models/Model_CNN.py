@@ -30,6 +30,12 @@ class ModelCNN(Model):
 
         # Create model
         model_input = layers.Input(shape=(self.text_len, 300))
+        # h = layers.Dense(units=1024, activation='tanh')(model_input)
+        # a = layers.Dense(units=1, activation='tanh')(h)
+        # a = layers.Flatten()(a)
+        # s = tf.math.sigmoid(a)
+        # model_input = model_input * tf.expand_dims(s, axis=-1)
+        # model_input = tf.keras.layers.Input(shape=(self.text_len, 300))
 
         output_cnn_1 = layers.Conv1D(128, 1, activation='relu')(model_input)
         output_cnn_1 = layers.MaxPool1D(self.text_len-1)(output_cnn_1)

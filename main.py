@@ -7,9 +7,9 @@ from sklearn.model_selection import train_test_split
 from feature_extraction import Chi2
 
 datasets = {'mebeshopee': [6, 0],
-              'mebetiki': [6, 1],
-              'techshopee': [8, 2],
-              'techtiki': [8, 3]
+            'mebetiki': [6, 1],
+            'techshopee': [8, 2],
+            'techtiki': [8, 3]
             }
 data_paths = [
     r"H:\DS&KT Lab\NCKH\Aquaman\data\data_mebe\mebeshopee.csv",
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     inputs, outputs = preprocess_inputs(inputs, outputs, text_len[datasets[argv][1]])   # 2051 samples, 2051 samples
 
     # # Make a vocabulary from the inputs data
-    # vocab = make_vocab(inputs)      # 1225 words
+    vocab = make_vocab(inputs)      # 1225 words
 
     """ _________________________________________________________________________________________________________ """
     # # Make chi2 dictionary for every aspect
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     CNN_embedding = ['fasttext', 'fasttext_chi2_attention']
 
     # Call a model
-    model = ModelMLP(MLP_embedding[1])
-    # model = ModelCNN(CNN_embedding[0], text_len[datasets[argv][1]], fasttext)
+    # model = ModelMLP(MLP_embedding[1])
+    model = ModelCNN(CNN_embedding[1], text_len[datasets[argv][1]], fasttext)
 
     # Train model
     model.train(x_tr, y_tr)
