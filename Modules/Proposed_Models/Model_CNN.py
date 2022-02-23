@@ -5,6 +5,8 @@ from Modules.models import Model
 from tensorflow.keras import layers
 from sklearn.utils.class_weight import compute_class_weight
 from Modules.preprocess import load_chi2
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
 
 
 class ModelCNN(Model):
@@ -18,7 +20,8 @@ class ModelCNN(Model):
         self.embedding = embedding
         self.text_len = text_len
         self.fasttext = pretrained
-        self.epoches = [10, 10, 10, 10, 16, 10, 20, 10]
+        # self.epoches = [15, 15, 15, 15, 16, 15, 20, 15]
+        self.epoches = [2, 2, 2, 2, 2, 2, 2, 2]
 
         self.chi2_dict = []
         for i in range(self.num_aspects):
@@ -60,24 +63,26 @@ class ModelCNN(Model):
             for w, i in zip(text, range(len(text))):
                 if w in self.fasttext:
                     text_matrix[i] = self.fasttext[w]
-            for i in range(self.num_aspects):
-                inputs_matrix[i].append(text_matrix)
+            for j in range(self.num_aspects):
+                inputs_matrix[j].append(text_matrix)
 
         return np.array(inputs_matrix)
 
     def represent_fasttext_chi2_attention(self, inputs):
         inputs_matrix = [[] for _ in range(self.num_aspects)]
         for i in range(self.num_aspects):
-            med = max(list(self.chi2_dict[i].values())) - min(list(self.chi2_dict[i].values()))
+            max_chi2_score = max(list(self.chi2_dict[i].values()))
+            min_chi2_score = min(list(self.chi2_dict[i].values()))
+            med = max_chi2_score - min_chi2_score
             for ip in inputs:
                 text_matrix = np.zeros((self.text_len, 300))
                 text = ip.split(' ')
                 for w, j in zip(text, range(len(text))):
                     if w in self.fasttext:
                         if w in self.chi2_dict[i]:
-                            text_matrix[i] = self.fasttext[w] * ((self.chi2_dict[i][w] - min(list(self.chi2_dict[i].values()))) / med)
+                            text_matrix[j] = self.fasttext[w] * ((self.chi2_dict[i][w] - min_chi2_score)/med)
                         else:
-                            text_matrix[i] = self.fasttext[w]
+                            text_matrix[j] = self.fasttext[w]
                 inputs_matrix[i].append(text_matrix)
 
         return np.array(inputs_matrix)
@@ -93,7 +98,6 @@ class ModelCNN(Model):
         elif self.embedding == 'fasttext_chi2_attention':
             x = self.represent_fasttext_chi2_attention(inputs)
         y = [np.array(([output[i] for output in outputs]), dtype='float32') for i in range(self.num_aspects)]
-        print()
 
         for i in range(self.num_aspects):
             print("Training aspect: {}".format(self.categories[i]))
@@ -101,15 +105,14 @@ class ModelCNN(Model):
             class_weight = compute_class_weight('balanced', classes=np.unique(y[i]), y=y[i])
             class_weight[1] = class_weight[1] * 5
 
-            callback = tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=0.01, patience=2)
+            callback = tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=0.001, patience=2)
 
             self.models[i].compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
             self.models[i].fit(x[i], y[i], epochs=self.epoches[i], batch_size=128, callbacks=[callback])
-            # self.models[i].summary()
+            print('\n')
 
-    def predict(self, inputs):
+    def predict(self, inputs, y_te):
         """
-
         :param inputs:
         :return:
         :rtype: list of models.Output
@@ -119,13 +122,15 @@ class ModelCNN(Model):
         elif self.embedding == 'fasttext_chi2_attention':
             x = self.represent_fasttext_chi2_attention(inputs)
         outputs = []
-        # for i in range(self.num_aspects):
-        #     pred = self.models[i].predict(x[i])
-        #     pred = np.argmax(pred, axis=-1)
-        #     outputs.append(pred)
-
-        predicts = [np.argmax(self.models[i].predict(x[i]), axis=-1) for i in range(self.num_aspects)]
-        # predicts = [self.models[i].predict(x[i]) for i in range(self.num_aspects)]
+        predicts = []
+        for i in range(self.num_aspects):
+            pred = np.argmax(self.models[i].predict(x[i]), axis=-1)
+            _y_te = [y[i] for y in y_te]
+            print("Classification Report for aspect: {}".format(self.categories[i]))
+            print(classification_report(_y_te, list(pred)))
+            # print("Confusion Matrix for aspect: {}".format(self.categories[i]))
+            # print(confusion_matrix(_y_te, pred))
+            predicts.append(pred)
 
         for ps in zip(*predicts):
             scores = list(ps)

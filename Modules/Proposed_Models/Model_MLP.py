@@ -4,7 +4,8 @@ import numpy as np
 from Modules.models import Model
 from tensorflow.keras import layers
 from Modules.preprocess import load_chi2
-
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
 
 class ModelMLP(Model):
     def __init__(self, embedding):
@@ -74,9 +75,8 @@ class ModelMLP(Model):
         for i in range(self.num_aspects):
             self.models[i].compile(loss='mse', optimizer='adam', metrics=['accuracy'])
             self.models[i].fit(x[i], ys[i], epochs=3, batch_size=128)
-            # self.models[i].summary()
 
-    def predict(self, inputs):
+    def predict(self, inputs, y_te):
         """
 
         :param inputs:
@@ -88,7 +88,14 @@ class ModelMLP(Model):
         else:
             x = self.represent_onehot_chi2(inputs)
         outputs = []
-        predicts = [self.models[i].predict_classes(x[i]) for i in range(self.num_aspects)]
+        predicts = []
+        for i in range(self.num_aspects):
+            pred = self.models[i].predict_classes(x[i])
+            _y_te = [y[i] for y in y_te]
+            print("Classification Report for aspect: {}".format(self.categories[i]))
+            print(classification_report(_y_te, list(pred)))
+            predicts.append(pred)
+
         for ps in zip(*predicts):
             scores = list(ps)
             outputs.append(scores)

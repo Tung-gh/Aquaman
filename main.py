@@ -43,18 +43,18 @@ if __name__ == '__main__':
     x_tr, x_te, y_tr, y_te = train_test_split(inputs, outputs, test_size=0.2, random_state=20)      # 1640, 411
 
     # Embedding mode for MLP, CNN model
-    # MLP_embedding = ['onehot', 'onehot_chi2']
+    MLP_embedding = ['onehot', 'onehot_chi2']
     CNN_embedding = ['fasttext', 'fasttext_chi2_attention']
 
     # Call a model
-    # model = ModelMLP(MLP_embedding[0])
-    model = ModelCNN(CNN_embedding[1], text_len[datasets[argv][1]], fasttext)
+    model = ModelMLP(MLP_embedding[1])
+    # model = ModelCNN(CNN_embedding[0], text_len[datasets[argv][1]], fasttext)
 
     # Train model
     model.train(x_tr, y_tr)
     # Predict the labels
-    predicts = model.predict(x_te)
-    print()
+    predicts = model.predict(x_te, y_te)
+
     """ _________________________________________________________________________________________________________ """
     # Print the results
     if num_aspects == 6:
