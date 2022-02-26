@@ -31,7 +31,7 @@ if __name__ == '__main__':
     inputs, outputs = preprocess_inputs(inputs, outputs, text_len[datasets[argv][1]])   # 2051 samples, 2051 samples
 
     # # Make a vocabulary from the inputs data
-    vocab = make_vocab(inputs)      # 1225 words
+    # vocab = make_vocab(inputs)      # 1225 words
 
     """ _________________________________________________________________________________________________________ """
     # # Make chi2 dictionary for every aspect
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     CNN_embedding = ['fasttext', 'fasttext_chi2_attention']
 
     # Call a model
-    # model = ModelMLP(MLP_embedding[1])
+    # model = ModelMLP(MLP_embedding[0])
     model = ModelCNN(CNN_embedding[1], text_len[datasets[argv][1]], fasttext)
 
     # Train model
@@ -57,10 +57,10 @@ if __name__ == '__main__':
 
     """ _________________________________________________________________________________________________________ """
     # Print the results
-    if num_aspects == 6:
-        print("\t\t Ship \t\t Gia \t\t Chinh hang \t\t Chat luong \t\t Dich vu \t\t An toan")
-    else:
-        print("\t\t Cau hinh \t\t Mau ma \t\t Hieu nang \t\t Ship \t\t Gia \t\t Chinh hang \t\t Dich vu \t\t Phu kien")
+    # if num_aspects == 6:
+    #     print("\t\t Ship \t\t Gia \t\t Chinh hang \t\t Chat luong \t\t Dich vu \t\t An toan")
+    # else:
+    #     print("\t\t Cau hinh \t\t Mau ma \t\t Hieu nang \t\t Ship \t\t Gia \t\t Chinh hang \t\t Dich vu \t\t Phu kien")
     cal_aspect_prf(y_te, predicts, num_aspects, verbal=True)
 
 

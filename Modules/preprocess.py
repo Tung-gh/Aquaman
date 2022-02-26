@@ -40,7 +40,7 @@ def load_data(data_path, num_aspects):
     if num_aspects == 6:
         categories = ['ship', 'giá', 'chính hãng', 'chất lượng', 'dịch vụ', 'an toàn']
     else:
-        categories = ['cấu hình','mẫu mã','hiệu năng','ship','giá','chính hãng','dịch vụ','phụ kiện']
+        categories = ['cấu hình', 'mẫu mã', 'hiệu năng', 'ship', 'giá', 'chính hãng', 'dịch vụ', 'phụ kiện']
 
     inputs, outputs = [], []
     df = pd.read_csv(data_path,  encoding='utf-8')

@@ -73,8 +73,8 @@ class ModelMLP(Model):
         ys = [np.array([output[i] for output in outputs]) for i in range(self.num_aspects)]
 
         for i in range(self.num_aspects):
-            self.models[i].compile(loss='mse', optimizer='adam', metrics=['accuracy'])
-            self.models[i].fit(x[i], ys[i], epochs=3, batch_size=128)
+            self.models[i].compile(loss='binary_crossentropy', optimizer='adam', metrics=['mse'])
+            self.models[i].fit(x[i], ys[i], epochs=5, batch_size=128)
 
     def predict(self, inputs, y_te):
         """

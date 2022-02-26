@@ -20,8 +20,8 @@ class ModelCNN(Model):
         self.embedding = embedding
         self.text_len = text_len
         self.fasttext = pretrained
-        # self.epoches = [15, 15, 15, 15, 16, 15, 20, 15]
-        self.epoches = [2, 2, 2, 2, 2, 2, 2, 2]
+        self.epoches = [15, 15, 15, 15, 16, 15, 20, 15]
+        # self.epoches = [2, 2, 2, 2, 2, 2, 2, 2]
 
         self.chi2_dict = []
         for i in range(self.num_aspects):
@@ -30,22 +30,22 @@ class ModelCNN(Model):
 
         # Create model
         model_input = layers.Input(shape=(self.text_len, 300))
-        # h = layers.Dense(units=1024, activation='tanh')(model_input)
-        # a = layers.Dense(units=1, activation='tanh')(h)
-        # a = layers.Flatten()(a)
-        # s = tf.math.sigmoid(a)
-        # model_input = model_input * tf.expand_dims(s, axis=-1)
-        # model_input = tf.keras.layers.Input(shape=(self.text_len, 300))
+        h = layers.Dense(units=1024, activation='tanh')(model_input)
+        a = layers.Dense(units=1, activation='tanh')(h)
+        a = layers.Flatten()(a)
+        s = tf.math.sigmoid(a)
+        model_input = model_input * tf.expand_dims(s, axis=-1)
+        model_input = tf.keras.layers.Input(tensor=model_input)
 
-        output_cnn_1 = layers.Conv1D(128, 1, activation='relu')(model_input)
+        output_cnn_1 = layers.Conv1D(512, 1, activation='relu')(model_input)
         output_cnn_1 = layers.MaxPool1D(self.text_len-1)(output_cnn_1)
         output_cnn_1 = layers.Flatten()(output_cnn_1)
 
-        output_cnn_2 = layers.Conv1D(128, 2, activation='relu')(model_input)
+        output_cnn_2 = layers.Conv1D(512, 2, activation='relu')(model_input)
         output_cnn_2 = layers.MaxPool1D(self.text_len-2)(output_cnn_2)
         output_cnn_2 = layers.Flatten()(output_cnn_2)
 
-        output_cnn_3 = layers.Conv1D(64, 3, activation='relu')(model_input)
+        output_cnn_3 = layers.Conv1D(128, 3, activation='relu')(model_input)
         output_cnn_3 = layers.MaxPool1D(self.text_len-3)(output_cnn_3)
         output_cnn_3 = layers.Flatten()(output_cnn_3)
 
@@ -103,7 +103,7 @@ class ModelCNN(Model):
             x = self.represent_fasttext(inputs)
         elif self.embedding == 'fasttext_chi2_attention':
             x = self.represent_fasttext_chi2_attention(inputs)
-        y = [np.array(([output[i] for output in outputs]), dtype='float32') for i in range(self.num_aspects)]
+        y = [np.array(([output[i] for output in outputs]), dtype='int32') for i in range(self.num_aspects)]
 
         for i in range(self.num_aspects):
             print("Training aspect: {}".format(self.categories[i]))
@@ -111,7 +111,7 @@ class ModelCNN(Model):
             class_weight = compute_class_weight('balanced', classes=np.unique(y[i]), y=y[i])
             class_weight[1] = class_weight[1] * 5
 
-            callback = tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=0.001, patience=2)
+            callback = tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=0.003, patience=2)
 
             self.models[i].compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
             self.models[i].fit(x[i], y[i], epochs=self.epoches[i], batch_size=128, callbacks=[callback])
