@@ -11,26 +11,26 @@ from sklearn.metrics import confusion_matrix
 
 class ModelCNN(Model):
     def __init__(self, embedding, text_len, pretrained):
-        if str(sys.argv[1])[:4] == "mebe":
-            self.num_aspects = 6
-            self.categories = ['Ship', 'Gia', 'Chinh hang', 'Chat luong', 'Dich vu', 'An toan']
-        else:
-            self.num_aspects = 8
-            self.categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
+        self.class_weight = None
+        self.epochs = None
+        self.threshold = None
+        self.chi2_dict = None
         self.embedding = embedding
         self.text_len = text_len
         self.fasttext = pretrained
-        self.epoches = [15, 15, 15, 15, 16, 15, 20, 15]
-        # self.epoches = [2, 2, 2, 2, 2, 2, 2, 2]
-
-        self.chi2_dict = []
-        for i in range(self.num_aspects):
-            path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
-            self.chi2_dict.append(load_chi2(path))
+        if str(sys.argv[1])[:4] == "mebe":
+            self.num_aspects = 6
+            self.categories = ['Ship', 'Gia', 'Chinh hang', 'Chat luong', 'Dich vu', 'An toan']
+            self.num = 0
+        else:
+            self.num_aspects = 8
+            self.categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
+            self.num = 1
 
         # Create model
         model_input = layers.Input(shape=(self.text_len, 300))
         h = layers.Dense(units=1024, activation='tanh')(model_input)
+        h = layers.Dense(units=512, activation='tanh')(h)
         a = layers.Dense(units=1, activation='tanh')(h)
         a = layers.Flatten()(a)
         s = tf.math.sigmoid(a)
@@ -51,17 +51,34 @@ class ModelCNN(Model):
 
         output_cnn = tf.concat([output_cnn_1, output_cnn_2, output_cnn_3], axis=-1)
 
-        output_mlp = layers.Dense(1024)(output_cnn)
-        output_mlp = layers.Dropout(0.5)(output_mlp)
-        output_mlp = layers.Dense(512)(output_mlp)
-        output_mlp = layers.Dropout(0.2)(output_mlp)
+        output_mlp = layers.Dense(512)(output_cnn)
+        output_mlp = layers.BatchNormalization()(output_mlp)
+        output_mlp = layers.Activation('tanh')(output_mlp)
+        # output_mlp = layers.Dropout(0.5)(output_mlp)
+        output_mlp = layers.Dense(256)(output_mlp)
+        output_mlp = layers.BatchNormalization()(output_mlp)
+        output_mlp = layers.Activation('tanh')(output_mlp)
+        # output_mlp = layers.Dropout(0.2)(output_mlp)
 
-        final_output = layers.Dense(2, activation='softmax')(output_mlp)
+        # final_output = layers.Dense(2, activation='softmax')(output_mlp)
+        final_output = layers.Dense(1, activation='sigmoid')(output_mlp)
 
         model = tf.keras.models.Model(inputs=model_input, outputs=final_output)
         self.models = [model for _ in range(self.num_aspects)]
 
     def represent_fasttext(self, inputs):
+        self.threshold = [
+            [0.02, 0.01, 0.01, 0.01, 0.01, 0.45],
+            []
+        ]
+        self.epochs = [
+            [5, 5, 6, 8, 7, 5],
+            []
+        ]
+        self.class_weight = [
+            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 7}, {0: 1, 1: 7}, {0: 1, 1: 5}, {0: 1, 1: 1}],
+            []
+        ]
         inputs_matrix = [[] for _ in range(self.num_aspects)]
         for ip in inputs:
             text = ip.split(' ')
@@ -75,6 +92,22 @@ class ModelCNN(Model):
         return np.array(inputs_matrix)
 
     def represent_fasttext_chi2_attention(self, inputs):
+        self.threshold = [
+            [0.1, 0.1, 0.2, 0.5, 0.08, 0.5],
+            []
+        ]
+        self.epochs = [
+            [6, 7, 10, 10, 10, 5],
+            []
+        ]
+        self.class_weight = [
+            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 1}],
+            []
+        ]
+        self.chi2_dict = []
+        for i in range(self.num_aspects):
+            path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
+            self.chi2_dict.append(load_chi2(path))
         inputs_matrix = [[] for _ in range(self.num_aspects)]
         for i in range(self.num_aspects):
             max_chi2_score = max(list(self.chi2_dict[i].values()))
@@ -108,13 +141,21 @@ class ModelCNN(Model):
         for i in range(self.num_aspects):
             print("Training aspect: {}".format(self.categories[i]))
 
-            class_weight = compute_class_weight('balanced', classes=np.unique(y[i]), y=y[i])
-            class_weight[1] = class_weight[1] * 5
+            # class_weight = compute_class_weight('balanced', classes=np.unique(y[i]), y=y[i])
+            # class_weight[1] = class_weight[1] * 5
 
             callback = tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=0.003, patience=2)
 
-            self.models[i].compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-            self.models[i].fit(x[i], y[i], epochs=self.epoches[i], batch_size=128, callbacks=[callback])
+            self.models[i].compile(loss='binary_crossentropy',  # sparse_categorical   binary
+                                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+                                   metrics=[tf.keras.metrics.BinaryCrossentropy()]
+                                   )
+            self.models[i].fit(x[i], y[i],
+                               epochs=self.epochs[self.num][i],
+                               batch_size=128,
+                               callbacks=[callback],
+                               class_weight=self.class_weight[self.num][i]
+                               )
             print('\n')
 
     def predict(self, inputs, y_te):
@@ -130,7 +171,8 @@ class ModelCNN(Model):
         outputs = []
         predicts = []
         for i in range(self.num_aspects):
-            pred = np.argmax(self.models[i].predict(x[i]), axis=-1)
+            # pred = np.argmax(self.models[i].predict(x[i]), axis=-1)
+            pred = self.models[i].predict(x[i]) > self.threshold[self.num][i]
             _y_te = [y[i] for y in y_te]
             print("Classification Report for aspect: {}".format(self.categories[i]))
             print(classification_report(_y_te, list(pred)))

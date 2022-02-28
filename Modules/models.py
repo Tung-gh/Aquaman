@@ -24,7 +24,7 @@ class Model:
         """
         raise NotImplementedError
 
-    def predict(self, inputs):
+    def predict(self, inputs, y_te):
         """
 
         :param inputs:

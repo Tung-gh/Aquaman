@@ -10,23 +10,18 @@ from sklearn.metrics import confusion_matrix
 
 class ModelMLP(Model):
     def __init__(self, embedding):
+        self.class_weight = None
+        self.epochs = None
+        self.threshold = None
+        self.embedding = embedding
         if str(sys.argv[1])[:4] == "mebe":
             self.num_aspects = 6
             self.categories = ['Ship', 'Gia', 'Chinh hang', 'Chat luong', 'Dich vu', 'An toan']
-            self.threshold = [0.03, 0.01, 0.01, 0.01, 0.01, 0.5]
-            self.epochs = [5, 5, 6, 6, 7, 5]
-            self.class_weight = [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3}, {0: 1, 1: 5}, {0: 1, 1: 1}]
-            # self.threshold = [0.03, 0.1, 0.3, 0.5, 0.1, 0.5]
-            # self.epochs = [6, 7, 10, 15, 7, 5]
-            # self.class_weight = [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3},  {0: 1, 1: 5}, {0: 1, 1: 1}]
+            self.num = 0
         else:
             self.num_aspects = 8
             self.categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
-            self.threshold = [0.08, 0.08, 0.08, 0.08, 0.08, 0.5, 0.5, 0.5]
-            self.epochs = [5, 5, 5, 5, 7, 5, 5, 5]
-            self.class_weight = [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3}, {0: 1, 1: 5}, {0: 1, 1: 1}, {0: 1, 1: 1}, {0: 1, 1: 1}]
-
-        self.embedding = embedding
+            self.num = 1
 
         self.vocab = []
         with open(r"H:\DS&KT Lab\\NCKH\\Aquaman\\data\\data_{}\\{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), encoding='utf8') as f:
@@ -54,6 +49,19 @@ class ModelMLP(Model):
         self.models = [model for _ in range(self.num_aspects)]
 
     def represent_onehot(self, inputs):
+        self.threshold = [
+            [0.03, 0.01, 0.01, 0.02, 0.01, 0.5],
+            []
+        ]
+        self.epochs = [
+            [5, 5, 6, 6, 7, 5],
+            []
+        ]
+        self.class_weight = [
+            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3}, {0: 1, 1: 5}, {0: 1, 1: 1}],
+            []
+        ]
+
         features = [[] for i in range(self.num_aspects)]
         for ip in inputs:
             _features = [1 if w in ip else 0 for w in self.vocab]
@@ -63,6 +71,18 @@ class ModelMLP(Model):
         return np.array(features)
 
     def represent_onehot_chi2(self, inputs):
+        self.threshold = [
+            [0.1, 0.1, 0.2, 0.5, 0.08, 0.5],
+            []
+        ]
+        self.epochs = [
+            [6, 7, 10, 20, 10, 5],
+            []
+        ]
+        self.class_weight = [
+            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 1}],
+            []
+        ]
         features = [[] for i in range(self.num_aspects)]
         for i in range(self.num_aspects):
             for ip in inputs:
@@ -90,8 +110,11 @@ class ModelMLP(Model):
 
         for i in range(self.num_aspects):
             print('Training aspect: {}'.format(self.categories[i]))
-            self.models[i].compile(loss='binary_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.BinaryCrossentropy()])
-            self.models[i].fit(x[i], ys[i], epochs=self.epochs[i], batch_size=128, class_weight=self.class_weight[i])
+            self.models[i].compile(loss='binary_crossentropy',
+                                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+                                   metrics=[tf.keras.metrics.BinaryCrossentropy()]
+                                   )
+            self.models[i].fit(x[i], ys[i], epochs=self.epochs[self.num][i], batch_size=128, class_weight=self.class_weight[self.num][i])
             print('\n')
 
     def predict(self, inputs, y_te):
@@ -108,8 +131,7 @@ class ModelMLP(Model):
         outputs = []
         predicts = []
         for i in range(self.num_aspects):
-            # pred = self.models[i].predict_classes(x[i])
-            pred = (self.models[i].predict(x[i]) > self.threshold[i]).astype('int32')
+            pred = self.models[i].predict(x[i]) > self.threshold[self.num][i]
             _y_te = [y[i] for y in y_te]
             print("Classification Report for aspect: {}".format(self.categories[i]))
             print(classification_report(_y_te, list(pred)))
