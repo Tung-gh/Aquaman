@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # # Make chi2 dictionary for every aspect
     # Chi2(inputs, outputs, num_aspects)
     # Load fastText embedding
-    fasttext = load_fasttext(e_path)
+    # fasttext = load_fasttext(e_path)
 
     # # Divide into train_set, test_set
     x_tr, x_te, y_tr, y_te = train_test_split(inputs, outputs, test_size=0.2, random_state=20)      # 1640, 411
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     CNN_embedding = ['fasttext', 'fasttext_chi2_attention']
 
     # Call a model
-    # model = ModelMLP(MLP_embedding[0])
-    model = ModelCNN(CNN_embedding[1], text_len[datasets[argv][1]], fasttext)
+    model = ModelMLP(MLP_embedding[0])
+    # model = ModelCNN(CNN_embedding[1], text_len[datasets[argv][1]], fasttext)
 
     # Train model
     model.train(x_tr, y_tr)

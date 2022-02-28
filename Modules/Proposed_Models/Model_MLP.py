@@ -7,14 +7,25 @@ from Modules.preprocess import load_chi2
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 
+
 class ModelMLP(Model):
     def __init__(self, embedding):
         if str(sys.argv[1])[:4] == "mebe":
             self.num_aspects = 6
             self.categories = ['Ship', 'Gia', 'Chinh hang', 'Chat luong', 'Dich vu', 'An toan']
+            self.threshold = [0.03, 0.01, 0.01, 0.01, 0.01, 0.5]
+            self.epochs = [5, 5, 6, 6, 7, 5]
+            self.class_weight = [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3}, {0: 1, 1: 5}, {0: 1, 1: 1}]
+            # self.threshold = [0.03, 0.1, 0.3, 0.5, 0.1, 0.5]
+            # self.epochs = [6, 7, 10, 15, 7, 5]
+            # self.class_weight = [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3},  {0: 1, 1: 5}, {0: 1, 1: 1}]
         else:
             self.num_aspects = 8
             self.categories = ['Cau hinh', 'Mau ma', 'Hieu nang', 'Ship', 'Gia', 'Chinh hang', 'Dich vu', 'Phu kien']
+            self.threshold = [0.08, 0.08, 0.08, 0.08, 0.08, 0.5, 0.5, 0.5]
+            self.epochs = [5, 5, 5, 5, 7, 5, 5, 5]
+            self.class_weight = [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3}, {0: 1, 1: 5}, {0: 1, 1: 1}, {0: 1, 1: 1}, {0: 1, 1: 1}]
+
         self.embedding = embedding
 
         self.vocab = []
@@ -30,9 +41,13 @@ class ModelMLP(Model):
         # Create model
         model = tf.keras.models.Sequential(
             [
-                layers.Dense(512),
-                layers.Activation('relu'),
+                layers.Dense(256),
                 layers.BatchNormalization(),
+                layers.Activation('tanh'),
+                layers.Dropout(0.1),
+                layers.Dense(128),
+                layers.BatchNormalization(),
+                layers.Activation('tanh'),
                 layers.Dense(1, activation='sigmoid')
             ]
         )
@@ -71,10 +86,13 @@ class ModelMLP(Model):
         else:
             x = self.represent_onehot_chi2(inputs)
         ys = [np.array([output[i] for output in outputs]) for i in range(self.num_aspects)]
+        print()
 
         for i in range(self.num_aspects):
-            self.models[i].compile(loss='binary_crossentropy', optimizer='adam', metrics=['mse'])
-            self.models[i].fit(x[i], ys[i], epochs=5, batch_size=128)
+            print('Training aspect: {}'.format(self.categories[i]))
+            self.models[i].compile(loss='binary_crossentropy', optimizer='adam', metrics=[tf.keras.metrics.BinaryCrossentropy()])
+            self.models[i].fit(x[i], ys[i], epochs=self.epochs[i], batch_size=128, class_weight=self.class_weight[i])
+            print('\n')
 
     def predict(self, inputs, y_te):
         """
@@ -90,7 +108,8 @@ class ModelMLP(Model):
         outputs = []
         predicts = []
         for i in range(self.num_aspects):
-            pred = self.models[i].predict_classes(x[i])
+            # pred = self.models[i].predict_classes(x[i])
+            pred = (self.models[i].predict(x[i]) > self.threshold[i]).astype('int32')
             _y_te = [y[i] for y in y_te]
             print("Classification Report for aspect: {}".format(self.categories[i]))
             print(classification_report(_y_te, list(pred)))
