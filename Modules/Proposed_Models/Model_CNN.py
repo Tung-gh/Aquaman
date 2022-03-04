@@ -7,6 +7,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from Modules.preprocess import load_chi2
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
+from matplotlib import pyplot as plt
 
 
 class ModelCNN(Model):
@@ -29,39 +30,40 @@ class ModelCNN(Model):
 
         # Create model
         model_input = layers.Input(shape=(self.text_len, 300))
-        h = layers.Dense(units=1024, activation='tanh')(model_input)
-        h = layers.Dense(units=512, activation='tanh')(h)
-        a = layers.Dense(units=1, activation='tanh')(h)
-        a = layers.Flatten()(a)
-        s = tf.math.sigmoid(a)
-        model_input = model_input * tf.expand_dims(s, axis=-1)
-        model_input = tf.keras.layers.Input(tensor=model_input)
+        # h = layers.Dense(units=1024, activation='relu')(model_input)
+        # h = layers.Dense(units=512, activation='relu')(h)
+        # a = layers.Dense(units=1, activation='relu')(h)
+        # a = layers.Flatten()(a)
+        # s = tf.math.sigmoid(a)
+        # model_input = model_input * tf.expand_dims(s, axis=-1)
+        # model_input = tf.keras.layers.Input(tensor=model_input)
 
-        output_cnn_1 = layers.Conv1D(512, 1, activation='relu')(model_input)
+        output_cnn_1 = layers.Conv1D(512, 1, activation='tanh')(model_input)
         output_cnn_1 = layers.MaxPool1D(self.text_len-1)(output_cnn_1)
         output_cnn_1 = layers.Flatten()(output_cnn_1)
 
-        output_cnn_2 = layers.Conv1D(512, 2, activation='relu')(model_input)
+        output_cnn_2 = layers.Conv1D(256, 2, activation='tanh')(model_input)
         output_cnn_2 = layers.MaxPool1D(self.text_len-2)(output_cnn_2)
         output_cnn_2 = layers.Flatten()(output_cnn_2)
 
-        output_cnn_3 = layers.Conv1D(128, 3, activation='relu')(model_input)
-        output_cnn_3 = layers.MaxPool1D(self.text_len-3)(output_cnn_3)
-        output_cnn_3 = layers.Flatten()(output_cnn_3)
-
-        output_cnn = tf.concat([output_cnn_1, output_cnn_2, output_cnn_3], axis=-1)
+        # output_cnn_3 = layers.Conv1D(128, 3, activation='tanh')(model_input)
+        # output_cnn_3 = layers.MaxPool1D(self.text_len-3)(output_cnn_3)
+        # output_cnn_3 = layers.Flatten()(output_cnn_3)
+        #
+        # output_cnn = tf.concat([output_cnn_1, output_cnn_2, output_cnn_3], axis=-1)
+        output_cnn = tf.concat([output_cnn_1, output_cnn_2], axis=-1)
 
         output_mlp = layers.Dense(512)(output_cnn)
         output_mlp = layers.BatchNormalization()(output_mlp)
         output_mlp = layers.Activation('tanh')(output_mlp)
-        # output_mlp = layers.Dropout(0.5)(output_mlp)
+        # output_mlp = layers.Dropout(0.25)(output_mlp)
         output_mlp = layers.Dense(256)(output_mlp)
         output_mlp = layers.BatchNormalization()(output_mlp)
         output_mlp = layers.Activation('tanh')(output_mlp)
         # output_mlp = layers.Dropout(0.2)(output_mlp)
 
-        # final_output = layers.Dense(2, activation='softmax')(output_mlp)
-        final_output = layers.Dense(1, activation='sigmoid')(output_mlp)
+        final_output = layers.Dense(2, activation='softmax')(output_mlp)
+        # final_output = layers.Dense(1, activation='sigmoid')(output_mlp)
 
         model = tf.keras.models.Model(inputs=model_input, outputs=final_output)
         self.models = [model for _ in range(self.num_aspects)]
@@ -93,11 +95,11 @@ class ModelCNN(Model):
 
     def represent_fasttext_chi2_attention(self, inputs):
         self.threshold = [
-            [0.1, 0.1, 0.2, 0.5, 0.08, 0.5],
+            [0.1, 0.1, 0.2, 0.6, 0.1, 0.5],
             []
         ]
         self.epochs = [
-            [6, 7, 10, 10, 10, 5],
+            [20, 20, 20, 20, 20, 20],
             []
         ]
         self.class_weight = [
@@ -141,14 +143,13 @@ class ModelCNN(Model):
         for i in range(self.num_aspects):
             print("Training aspect: {}".format(self.categories[i]))
 
-            # class_weight = compute_class_weight('balanced', classes=np.unique(y[i]), y=y[i])
-            # class_weight[1] = class_weight[1] * 5
+            callback = tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=0.005, patience=2)
 
-            callback = tf.keras.callbacks.EarlyStopping(monitor='loss', min_delta=0.003, patience=2)
-
-            self.models[i].compile(loss='binary_crossentropy',  # sparse_categorical   binary
+            self.models[i].compile(loss='sparse_categorical_crossentropy',  # sparse_categorical   binary
                                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-                                   metrics=[tf.keras.metrics.BinaryCrossentropy()]
+                                   metrics=[tf.keras.metrics.SparseCategoricalCrossentropy(),
+                                            'accuracy'
+                                            ]
                                    )
             self.models[i].fit(x[i], y[i],
                                epochs=self.epochs[self.num][i],
@@ -171,8 +172,8 @@ class ModelCNN(Model):
         outputs = []
         predicts = []
         for i in range(self.num_aspects):
-            # pred = np.argmax(self.models[i].predict(x[i]), axis=-1)
-            pred = self.models[i].predict(x[i]) > self.threshold[self.num][i]
+            pred = np.argmax(self.models[i].predict(x[i]), axis=-1)
+            # pred = self.models[i].predict(x[i]) > self.threshold[self.num][i]
             _y_te = [y[i] for y in y_te]
             print("Classification Report for aspect: {}".format(self.categories[i]))
             print(classification_report(_y_te, list(pred)))
