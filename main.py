@@ -48,8 +48,8 @@ if __name__ == '__main__':
 
     # Call a model
     # model = ModelMLP(MLP_embedding[1])
-    model = ModelCNN(CNN_embedding[1], text_len[datasets[argv][1]], fasttext)
-
+    model = ModelCNN(CNN_embedding[0], text_len[datasets[argv][1]], fasttext)
+    print()
     # Train model
     model.train(x_tr, y_tr)
     # Predict the labels

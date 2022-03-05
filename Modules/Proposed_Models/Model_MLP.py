@@ -105,7 +105,7 @@ class ModelMLP(Model):
             x = self.represent_onehot(inputs)
         else:
             x = self.represent_onehot_chi2(inputs)
-        ys = [np.array([output[i] for output in outputs]) for i in range(self.num_aspects)]
+        y = [np.array([output[i] for output in outputs]) for i in range(self.num_aspects)]
         print()
 
         for i in range(self.num_aspects):
@@ -114,7 +114,7 @@ class ModelMLP(Model):
                                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
                                    metrics=[tf.keras.metrics.BinaryCrossentropy()]
                                    )
-            self.models[i].fit(x[i], ys[i], epochs=self.epochs[self.num][i], batch_size=128, class_weight=self.class_weight[self.num][i])
+            self.models[i].fit(x[i], y[i], epochs=self.epochs[self.num][i], batch_size=128, class_weight=self.class_weight[self.num][i])
             print('\n')
 
     def predict(self, inputs, y_te):
