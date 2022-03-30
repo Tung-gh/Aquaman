@@ -13,6 +13,8 @@ class ModelMLP(Model):
         self.class_weight = None
         self.epochs = None
         self.threshold = None
+        self.history = []
+        self.models = []
         self.embedding = embedding
         if str(sys.argv[1])[:4] == "mebe":
             self.num_aspects = 6
@@ -33,28 +35,13 @@ class ModelMLP(Model):
             path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
             self.chi2_dict.append(load_chi2(path))
 
-        # Create model
-        model = tf.keras.models.Sequential(
-            [
-                layers.Dense(256),
-                layers.BatchNormalization(),
-                layers.Activation('tanh'),
-                layers.Dropout(0.1),
-                layers.Dense(128),
-                layers.BatchNormalization(),
-                layers.Activation('tanh'),
-                layers.Dense(1, activation='sigmoid')
-            ]
-        )
-        self.models = [model for _ in range(self.num_aspects)]
-
     def represent_onehot(self, inputs):
         self.threshold = [
             [0.03, 0.01, 0.01, 0.02, 0.01, 0.5],
             []
         ]
         self.epochs = [
-            [5, 5, 6, 6, 7, 5],
+            [25, 25, 25, 25, 25, 25],   # [5, 5, 5, 5, 5, 5]
             []
         ]
         self.class_weight = [
@@ -76,11 +63,11 @@ class ModelMLP(Model):
             []
         ]
         self.epochs = [
-            [6, 7, 10, 20, 10, 5],
+            [25, 25, 25, 25, 25, 25],  # [6, 7, 10, 20, 10, 5]
             []
         ]
         self.class_weight = [
-            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 1}],
+            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3}],
             []
         ]
         features = [[] for i in range(self.num_aspects)]
@@ -95,29 +82,67 @@ class ModelMLP(Model):
 
         return np.array(features)
 
-    def train(self, inputs, outputs):
+    def create_model(self):
+        model = tf.keras.models.Sequential(
+            [
+                layers.Dense(256),
+                layers.BatchNormalization(),
+                layers.Activation('tanh'),
+                layers.Dropout(0.1),
+                layers.Dense(128),
+                layers.BatchNormalization(),
+                layers.Activation('tanh'),
+                # layers.Dense(1, activation='sigmoid')
+                layers.Dense(2, activation='softmax')
+            ]
+        )
+        return model
+
+    def train(self, x_tr, x_val, y_tr, y_val):
         """
         :param inputs:
         :param outputs:
         :return:
         """
         if self.embedding == 'onehot':
-            x = self.represent_onehot(inputs)
+            xt = self.represent_onehot(x_tr)
+            xv = self.represent_onehot(x_val)
         else:
-            x = self.represent_onehot_chi2(inputs)
-        y = [np.array([output[i] for output in outputs]) for i in range(self.num_aspects)]
+            xt = self.represent_onehot_chi2(x_tr)
+            xv = self.represent_onehot_chi2(x_val)
+        yt = [np.array([output[i] for output in y_tr]) for i in range(self.num_aspects)]
+        yv = [np.array([output[i] for output in y_val]) for i in range(self.num_aspects)]
         print()
 
         for i in range(self.num_aspects):
+            model = self.create_model()
+            self.models.append(model)
             print('Training aspect: {}'.format(self.categories[i]))
-            self.models[i].compile(loss='binary_crossentropy',
-                                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-                                   metrics=[tf.keras.metrics.BinaryCrossentropy()]
-                                   )
-            self.models[i].fit(x[i], y[i], epochs=self.epochs[self.num][i], batch_size=128, class_weight=self.class_weight[self.num][i])
-            print('\n')
 
-    def predict(self, inputs, y_te):
+            es = tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_crossentropy', min_delta=0.005,
+                                                  patience=3, restore_best_weights=True)
+            reducelr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_sparse_categorical_crossentropy', factor=0.2,
+                                                            patience=2, min_delta=0.005, verbose=1)  # min_lr=0.0001,
+            callbacks = [es, reducelr]  # val_binary_crossentropy val_sparse_categorical_crossentropy
+
+            # print(self.models[i].weights[-1])
+
+            self.models[i].compile(loss='sparse_categorical_crossentropy',  # binary_crossentropy sparse_categorical_crossentropy
+                                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+                                   metrics=[tf.keras.metrics.SparseCategoricalCrossentropy()]  # BinaryCrossentropy SparseCategoricalCrossentropy
+                                   )
+            history = self.models[i].fit(xt[i], yt[i],
+                                         epochs=self.epochs[self.num][i],
+                                         batch_size=128,
+                                         validation_data=(xv[i], yv[i]),
+                                         callbacks=callbacks,
+                                         class_weight=self.class_weight[self.num][i]
+                                         )
+            self.history.append(history)
+            print('\n')
+        return self.history
+
+    def predict(self, x_te, y_te):
         """
 
         :param inputs:
@@ -125,16 +150,19 @@ class ModelMLP(Model):
         :rtype: list of models.Output
         """
         if self.embedding == 'onehot':
-            x = self.represent_onehot(inputs)
-        else:
-            x = self.represent_onehot_chi2(inputs)
+            x = self.represent_onehot(x_te)
+        elif self.embedding == 'onehot_chi2':
+            x = self.represent_onehot_chi2(x_te)
         outputs = []
         predicts = []
         for i in range(self.num_aspects):
-            pred = self.models[i].predict(x[i]) > self.threshold[self.num][i]
+            # pred = self.models[i].predict(x[i]) > self.threshold[self.num][i]
+            pred = np.argmax(self.models[i].predict(x[i]), axis=-1)
             _y_te = [y[i] for y in y_te]
-            print("Classification Report for aspect: {}".format(self.categories[i]))
-            print(classification_report(_y_te, list(pred)))
+            # print("Classification Report for aspect: {}".format(self.categories[i]))
+            # print(classification_report(_y_te, list(pred)))
+            print("Confusion Matrix for aspect: {}".format(self.categories[i]))
+            print(confusion_matrix(_y_te, pred), '\n')
             predicts.append(pred)
 
         for ps in zip(*predicts):

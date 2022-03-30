@@ -1,11 +1,15 @@
 import sys
-import io
 import pandas as pd
-import numpy as np
 import string
+import matplotlib.pyplot as plt
 
 from Input_Output import Input, Output
+from feature_extraction import Chi2
 from sklearn.feature_extraction.text import CountVectorizer
+from collections import Counter
+from wordcloud import WordCloud
+from wordcloud import ImageColorGenerator
+
 
 punctuations = list(string.punctuation)
 useless_labels = ['295', '296', '314', '315', '329', '330', '348', '349']
@@ -60,24 +64,6 @@ def load_data(data_path, num_aspects):
     return inputs, outputs
 
 
-def preprocess_inputs(inputs, outputs, text_len):
-    inp, outp = [], []
-    for ip, op in zip(inputs, outputs):
-        text = ip.text.strip().replace('_', ' ').split(' ')
-        if len(text) <= text_len:
-            for j in range(len(text)):
-                if contains_digit(text[j].strip()):
-                    text[j] = '0'
-            for token in text:
-                if len(token) <= 1 or token.strip() in punctuations:
-                    text.remove(token)
-            ip.text = ' '.join(text)
-            inp.append(ip.text)
-            outp.append(op.scores)
-
-    return inp, outp
-
-
 def make_vocab(inputs):
 
     # """
@@ -104,6 +90,45 @@ def make_vocab(inputs):
     return vocab
 
 
+def preprocess_inputs(inputs, outputs, text_len, num_aspects):
+    inp, outp = [], []
+    for ip, op in zip(inputs, outputs):
+        text = ip.text.strip().replace('_', ' ').split(' ')
+        if len(text) <= text_len:
+            for j in range(len(text)):
+                if contains_digit(text[j].strip()):
+                    text[j] = '0'
+            for token in text:
+                if len(token) <= 1 or token.strip() in punctuations:
+                    text.remove(token)
+            ip.text = ' '.join(text)
+            inp.append(ip.text)
+            outp.append(op.scores)
+
+    # le = []
+    # for ip in inp:
+    #     le.append(len(ip.split(' ')))
+    # x = Counter(le).keys()
+    # y = Counter(le).values()
+    # print(max(x))
+    # plt.bar(x, y)
+    # plt.show()
+
+    # for i in range(6):
+    #     li = []
+    #     for ip, op in zip(inp, outp):
+    #         if op[i] == 1:
+    #             li.append(ip)
+    #     text = " ".join(i for i in li)
+    #     wcl = WordCloud(background_color='white').generate(text)
+    #     plt.imshow(wcl)
+    #     plt.show()
+
+    vocab = make_vocab(inp)
+    # Chi2(inp, outp, num_aspects)
+    return inp, outp, vocab
+
+
 def load_chi2(path):
     dictionary = {}
     with open(path, 'r', encoding='utf8') as f:
@@ -112,20 +137,3 @@ def load_chi2(path):
             dictionary[t[0]] = float(t[2])
 
     return dictionary
-
-
-def load_fasttext(path):
-    num_words = 100000
-    fasttext = {}
-    fin = io.open(path, 'r', encoding='utf-8', newline='\n', errors='ignore')
-    i = 0
-    for line in fin:
-        i += 1
-        tokens = line.rstrip().split(' ')
-        fasttext[tokens[0]] = np.array([float(val) for val in tokens[1:]])
-        fasttext[tokens[0]] /= np.linalg.norm(fasttext[tokens[0]])
-
-        if i > num_words:
-            break
-
-    return fasttext

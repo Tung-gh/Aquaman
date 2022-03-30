@@ -1,2 +1,7 @@
 vn_fasttext
+phobert
+vncorenlp
+transformers
 data
+test.py
+test2.py

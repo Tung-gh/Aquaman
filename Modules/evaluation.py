@@ -1,7 +1,7 @@
 from prettytable import PrettyTable
 
 
-def cal_aspect_prf(goldens, predicts, num_aspects, verbal=False):
+def cal_aspect_prf(goldens, predicts, history, num_aspects, verbal=False):
     """
 
     :param verbal:
