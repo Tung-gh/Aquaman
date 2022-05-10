@@ -1,7 +1,8 @@
 import sys
 import pandas as pd
-import string
+import re
 import matplotlib.pyplot as plt
+import string
 
 from Input_Output import Input, Output
 from feature_extraction import Chi2
@@ -9,7 +10,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from collections import Counter
 from wordcloud import WordCloud
 from wordcloud import ImageColorGenerator
-
+from vncorenlp import VnCoreNLP
 
 punctuations = list(string.punctuation)
 useless_labels = ['295', '296', '314', '315', '329', '330', '348', '349']
@@ -17,6 +18,13 @@ useless_labels = ['295', '296', '314', '315', '329', '330', '348', '349']
 
 def is_nan(s):
     return s != s
+
+
+def typo_trash_labeled(lst):
+    for i in lst:
+        if i in useless_labels:
+            return True
+    return False
 
 
 def contains_punctuation(s):
@@ -32,12 +40,6 @@ def contains_digit(w):
             return True
     return False
 
-
-def typo_trash_labeled(lst):
-    for i in lst:
-        if i in useless_labels:
-            return True
-    return False
 
 
 def load_data(data_path, num_aspects):
@@ -65,27 +67,12 @@ def load_data(data_path, num_aspects):
 
 
 def make_vocab(inputs):
-
-    # """
     cv = CountVectorizer()
     x = cv.fit_transform(inputs)
     vocab = cv.get_feature_names_out()
     with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
         for w in vocab:
             f.write('{}\n'.format(w))
-    # """
-
-    # vocab = []
-    # for ip in inputs:
-    #     text = ip.text.split(' ')
-    #     for token in text:
-    #         vocab.append(token)
-    # # Make a non-duplicated vocabulary
-    # vocab = list(dict.fromkeys(vocab))
-    #
-    # with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
-    #     for w in vocab:
-    #         f.write('{}\n'.format(w))
 
     return vocab
 
@@ -93,18 +80,18 @@ def make_vocab(inputs):
 def preprocess_inputs(inputs, outputs, text_len, num_aspects):
     inp, outp = [], []
     for ip, op in zip(inputs, outputs):
-        text = ip.text.strip().replace('_', ' ').split(' ')
-        if len(text) <= text_len:
-            for j in range(len(text)):
-                if contains_digit(text[j].strip()):
-                    text[j] = '0'
-            for token in text:
-                if len(token) <= 1 or token.strip() in punctuations:
-                    text.remove(token)
-            ip.text = ' '.join(text)
-            inp.append(ip.text)
+        text = ip.text.strip()
+        text = re.sub('_', ' ', text)
+        if len(text.split(' ')) <= text_len:
+            text = re.sub("\d+", '', text)
+            text = re.sub('\W+', ' ', text).strip()
+            inp.append(text)
             outp.append(op.scores)
 
+    """
+    OTHERS PROCESSES
+    """
+    # # Check length of all texts
     # le = []
     # for ip in inp:
     #     le.append(len(ip.split(' ')))
@@ -114,7 +101,8 @@ def preprocess_inputs(inputs, outputs, text_len, num_aspects):
     # plt.bar(x, y)
     # plt.show()
 
-    # for i in range(6):
+    # # Plot word cloud for each aspect
+    # for i in range(num_aspects):
     #     li = []
     #     for ip, op in zip(inp, outp):
     #         if op[i] == 1:
@@ -122,11 +110,26 @@ def preprocess_inputs(inputs, outputs, text_len, num_aspects):
     #     text = " ".join(i for i in li)
     #     wcl = WordCloud(background_color='white').generate(text)
     #     plt.imshow(wcl)
+    #     plt.axis('off')
     #     plt.show()
 
-    vocab = make_vocab(inp)
+    # Make vocabulary
+    # vocab = make_vocab(inp)
+
+    # # Make Chi2_dictionary for fasttext embedding
     # Chi2(inp, outp, num_aspects)
-    return inp, outp, vocab
+
+    # # Make Chi2_dictionary for PhoBERT embedding
+    # rdrsegmenter = VnCoreNLP(r'H:\DS&KT Lab\NCKH\Aquaman\vncorenlp\VnCoreNLP-1.1.1.jar', annotators='wseg', max_heap_size='-Xmx500m')
+    # segmented_texts = []  # Texts which are segmented
+    # for i in range(len(inp)):
+    #     ip = rdrsegmenter.tokenize(inp[i])
+    #     for s in ip:
+    #         segmented_texts.append(' '.join(s))
+    #     assert len(segmented_texts) == i+1
+    # Chi2(segmented_texts, outp, num_aspects)
+
+    return inp, outp    # , vocab
 
 
 def load_chi2(path):

@@ -13,6 +13,7 @@ class ModelMLP(Model):
         self.class_weight = None
         self.epochs = None
         self.threshold = None
+        self.chi2_dict = []
         self.history = []
         self.models = []
         self.embedding = embedding
@@ -30,11 +31,6 @@ class ModelMLP(Model):
             for line in f:
                 self.vocab.append(line.strip())
 
-        self.chi2_dict = []
-        for i in range(self.num_aspects):
-            path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/{}_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
-            self.chi2_dict.append(load_chi2(path))
-
     def represent_onehot(self, inputs):
         self.threshold = [
             [0.03, 0.01, 0.01, 0.02, 0.01, 0.5],
@@ -45,7 +41,7 @@ class ModelMLP(Model):
             []
         ]
         self.class_weight = [
-            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 5}, {0: 1, 1: 3}, {0: 1, 1: 5}, {0: 1, 1: 1}],
+            [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 3}, {0: 1, 1: 3}, {0: 1, 1: 3}, {0: 1, 1: 3}],
             []
         ]
 
@@ -85,10 +81,10 @@ class ModelMLP(Model):
     def create_model(self):
         model = tf.keras.models.Sequential(
             [
-                layers.Dense(256),
+                layers.Dense(512),
                 layers.BatchNormalization(),
                 layers.Activation('tanh'),
-                layers.Dropout(0.1),
+                layers.Dropout(0.25),
                 layers.Dense(128),
                 layers.BatchNormalization(),
                 layers.Activation('tanh'),
@@ -107,9 +103,13 @@ class ModelMLP(Model):
         if self.embedding == 'onehot':
             xt = self.represent_onehot(x_tr)
             xv = self.represent_onehot(x_val)
-        else:
+        elif self.embedding == 'onehot_chi2':
+            for i in range(self.num_aspects):
+                path = r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_chi2_dict/old/{}_fasttext_{}.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1]), str(sys.argv[1]), self.categories[i])
+                self.chi2_dict.append(load_chi2(path))
             xt = self.represent_onehot_chi2(x_tr)
             xv = self.represent_onehot_chi2(x_val)
+
         yt = [np.array([output[i] for output in y_tr]) for i in range(self.num_aspects)]
         yv = [np.array([output[i] for output in y_val]) for i in range(self.num_aspects)]
         print()
@@ -125,11 +125,11 @@ class ModelMLP(Model):
                                                             patience=2, min_delta=0.005, verbose=1)  # min_lr=0.0001,
             callbacks = [es, reducelr]  # val_binary_crossentropy val_sparse_categorical_crossentropy
 
-            # print(self.models[i].weights[-1])
-
             self.models[i].compile(loss='sparse_categorical_crossentropy',  # binary_crossentropy sparse_categorical_crossentropy
                                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-                                   metrics=[tf.keras.metrics.SparseCategoricalCrossentropy()]  # BinaryCrossentropy SparseCategoricalCrossentropy
+                                   metrics=[tf.keras.metrics.SparseCategoricalCrossentropy(),    # BinaryCrossentropy SparseCategoricalCrossentropy
+                                            'accuracy'
+                                            ]
                                    )
             history = self.models[i].fit(xt[i], yt[i],
                                          epochs=self.epochs[self.num][i],

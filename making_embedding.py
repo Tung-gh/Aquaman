@@ -3,9 +3,8 @@ import numpy as np
 import pickle
 
 if __name__ == '__main__':
-
     # MAKING FASTTEXT FOR EMBEDDING
-    num_words = 100000
+    num_words = 500000
     fasttext = {}
     fin = io.open(r"H:\DS&KT Lab\NCKH\Aquaman\vn_fasttext\cc.vi.300.vec", 'r', encoding='utf-8', newline='\n', errors='ignore')
     i = 0

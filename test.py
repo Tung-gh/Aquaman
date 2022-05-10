@@ -1,116 +1,154 @@
 import torch
+from transformers import AutoModel, AutoTokenizer
+from vncorenlp import VnCoreNLP
+import sys
+import pandas as pd
 import numpy as np
 import tensorflow as tf
-from transformers import AutoModel, AutoTokenizer
+import re
+import matplotlib.pyplot as plt
+import pickle
 
-from main import inputs
-from vncorenlp import VnCoreNLP
+from Input_Output import Input, Output
+from feature_extraction import Chi2
+from sklearn.feature_extraction.text import CountVectorizer
+from collections import Counter
+from wordcloud import WordCloud
+from wordcloud import ImageColorGenerator
 
-if __name__ == '__main__':
-# def make_phobert_embedding(inputs):
-    # Call for PhoBERT pretrained model from huggingface-transformers
-    phoBert = AutoModel.from_pretrained('vinai/phobert-base', output_hidden_states=True)
-    tokenizer = AutoTokenizer.from_pretrained('vinai/phobert-base', use_fast=False)
+useless_labels = ['295', '296', '314', '315', '329', '330', '348', '349']
 
-    # Load and use RDRSegmenter from VnCoreNLP as recommended by PhoBERT authors
-    rdrsegmenter = VnCoreNLP(r'H:\DS&KT Lab\NCKH\Aquaman\vncorenlp\VnCoreNLP-1.1.1.jar',
-                             annotators='wseg', max_heap_size='-Xmx500m')
 
-    print('\n Segmented texts:')
-    segmented_texts = []    # Texts which are segmented
-    for inp in inputs[:10]:
-    # for inp in inputs:
-        _inp = rdrsegmenter.tokenize(inp)
-        print(_inp)
-        for sen in _inp:
-            segmented_texts.append(' '.join(sen))
-            print(len(' '.join(sen).split(' ')), ' '.join(sen))
-    print('Total:', len(segmented_texts))
+def is_nan(s):
+    return s != s
 
-    print('\n Encoded texts:')
-    encoded_texts = []      # Texts are converted to indices vectors with 2 added token indices for <s>, </s>
-    for st in segmented_texts:
-        _st = tokenizer.encode(st)
-        encoded_texts.append(_st)
-        print(int(len(_st)) - 2, _st)
-    print('Total2:', len(encoded_texts))
 
-    # padded_texts = pad_sequences(encoded_texts, maxlen=30, padding='post', truncating='post')
-    # for pt in padded_texts:
-    #     print(len(pt))
+def nload_data(data_path, num_aspects):
+    inputs, outputs = [], []
+    df = pd.read_csv(data_path,  encoding='utf-8')
+    aspects = list(range(num_aspects))
+    for index, row in df.iterrows():
+        if is_nan(row['text']) == 0:
+            text = row['text'].strip()
+            inputs.append(text)     # Input(text)
 
-    print('Masked positions:')
-    masked_pos = []
-    for mp in encoded_texts:
-        m = [int(token_id > 0) for token_id in mp]
-        masked_pos.append(m)
-    #     print(m)
-    # print(masked_pos)
+            _scores = list(row['label'][1:-1].split(', '))
+            scores = [int(i) for i in _scores[:num_aspects]]
+            outputs.append(scores)  # Output(aspects, scores)
 
-    tensors, masks = [], []
-    for i in range(len(masked_pos)):
-        tensors.append(torch.tensor([encoded_texts[i]]))
-        masks.append(torch.tensor([masked_pos[i]]))
-    print(len(tensors), len(masks))
+    return inputs, outputs
 
-    print('\n Lhs:')
-    lhs = []    # There are 13 tensors of 13 attention layers from PhoBERT <=> 1 word has 13 (768,)-tensor
-    for i in range(len(tensors)):
-        with torch.no_grad():
-            f = phoBert(tensors[i], masks[i])
-            hs = f[2]   # Len: 13 as 13 output tensors from 13 attention layers
-            _hs = np.squeeze(np.array([x.detach().numpy() for x in hs]), axis=1)
-            print(type(_hs), _hs.shape, type(_hs[0]), _hs[0].shape)    # _hs.shape: (attention_head * no_words * dim)
-            lhs.append(_hs)
 
-    print('\n reshaped_lhs:')
-    reshaped_lhs = []
-    for rlhs in lhs:
-        _rlhs = []
-        print(rlhs.shape[1])
-        for i in range(rlhs.shape[1]):
-            a = np.array([x[i] for x in rlhs])
-            print(a.shape)
-            _rlhs.append(a)
-        reshaped_lhs.append(_rlhs)
-    print(len(reshaped_lhs))
+def make_vocab(inputs):
+    cv = CountVectorizer()
+    x = cv.fit_transform(inputs)
+    vocab = cv.get_feature_names_out()
+    with open(r"H:/DS&KT Lab/NCKH/Aquaman/data/data_{}/{}_vocab_new.txt".format(str(sys.argv[1])[0:4], str(sys.argv[1])), 'w', encoding='utf8') as f:
+        for w in vocab:
+            f.write('{}\n'.format(w))
 
-    texts_token_emb = []
-    for tte in reshaped_lhs:
-        _tte = []
-        for i in tte:
-            emb = tf.reduce_sum(i[-4:], axis=0)
-            _tte.append(emb)
-        print(len(_tte))
-        texts_token_emb.append(np.array(_tte[1:-1]))
-    print(len(texts_token_emb))
+    return vocab
 
-    print()
-    # return texts_token_emb
 
-    # print('Texts embedding:')
-    # texts_embedding = []    # Each
-    # for i in range(len(lhs)):
-    #     tok_emb = torch.stack(lhs[i], dim=0)
-    #     tok_emb_squeeze = torch.squeeze(tok_emb, dim=1)
-    #     tok_emb_permute = tok_emb_squeeze.permute(1, 0, 2)
-    #     print(tok_emb.size(), tok_emb_squeeze.size(), tok_emb_permute.size())
-    #     # texts_embedding.append(tok_emb_permute)
-    #     texts_embedding.append(tok_emb_squeeze)
+def npreprocess_inputs(inputs, outputs, text_len): # , num_aspects
+    inp, outp = [], []
+    for ip, op in zip(inputs, outputs):
+        text = ip.strip()      # ip.text
+        _text = re.sub('_', ' ', text)
+        if len(_text.split(' ')) <= text_len:
+            _text = re.sub('\d+', '', _text)
+            _text = re.sub('\W+', ' ', _text).strip()
+            inp.append(_text)
+            outp.append(op)   # op.scores
+    print(len(inp), len(outp))
+
+    # # Check length of all texts
+    # le = []
+    # for ip in inp:
+    #     le.append(len(ip.split(' ')))
+    # x = Counter(le).keys()
+    # y = Counter(le).values()
+    # print(max(x))
+    # plt.bar(x, y)
+    # plt.show()
+
+    # # Plot word cloud for each aspect
+    # for i in range(num_aspects):
+    #     li = []
+    #     for ip, op in zip(inp, outp):
+    #         if op[i] == 1:
+    #             li.append(ip)
+    #     text = " ".join(i for i in li)
+    #     wcl = WordCloud(background_color='white').generate(text)
+    #     plt.imshow(wcl)
+    #     plt.show()
+
+    # vocab = make_vocab(inp)
+    # Chi2(inp, outp, num_aspects)
+
+    # phoBert = AutoModel.from_pretrained('vinai/phobert-base', output_hidden_states=True)
+    # tokenizer = AutoTokenizer.from_pretrained('vinai/phobert-base', use_fast=False)
+    # rdrsegmenter = VnCoreNLP(r'H:\DS&KT Lab\NCKH\Aquaman\vncorenlp\VnCoreNLP-1.1.1.jar', annotators='wseg', max_heap_size='-Xmx500m')
     #
-    # print('Token vector summarization:')
-    # tok_vec_sum = []
-    # for i in range(len(texts_embedding)):
-    #     tvs = []
-    #     for te in texts_embedding[i]:
-    #         sum_vec = torch.sum(te[-4:], dim=1)
-    #         tvs.append(sum_vec)
-    #     tok_vec_sum.append(tvs)
+    # segmented_texts = []  # Texts which are segmented
+    # for i in range(len(inp)):
+    #     ip = rdrsegmenter.tokenize(inp[i])
+    #     for s in ip:
+    #         segmented_texts.append(' '.join(s))
+    #     assert len(segmented_texts) == i+1
+    # print('length seg, outp', len(segmented_texts), len(outp))
+    # # Chi2(segmented_texts, outp, num_aspects)
+    #
+    # encoded_texts = []  # Texts are converted to indices vectors with 2 added token indices for <s>, </s>
+    # for st in segmented_texts:
+    #     _st = tokenizer.encode(st)
+    #     encoded_texts.append(_st)
+    # max_dim = max([len(i) for i in encoded_texts])
+    # print(max_dim)
+    #
+    # masked_pos = []
+    # for mp in encoded_texts:
+    #     m = [int(token_id > 0) for token_id in mp]
+    #     masked_pos.append(m)
+    #
+    # tensors, masks = [], []  # Convert list of indices to torch tensor
+    # for i in range(len(masked_pos)):
+    #     tensors.append(torch.tensor([encoded_texts[i]]))
+    #     masks.append(torch.tensor([masked_pos[i]]))
+    #
+    # lhs = []  # There are 13 tensors of 13 attention layers from PhoBERT <=> 1 word has 13 (768,)-tensor
+    # with torch.no_grad():
+    #     for i in range(len(tensors)):
+    #         f = phoBert(tensors[i], masks[i])
+    #         hs = f[2]  # Len: 13 as 13 output tensors from 13 attention layers
+    #         _hs = np.squeeze(np.array([x.detach().numpy() for x in hs]), axis=1)  # Reduce the dimension
+    #         lhs.append(_hs)     # 13 * num_word * 768
+    #
+    # reshaped_lhs = []  # Shape: num_words * 13 * 768
+    # for rlhs in lhs:
+    #     _rlhs = []
+    #     for i in range(rlhs.shape[1]):
+    #         a = np.array([x[i] for x in rlhs])
+    #         _rlhs.append(a)
+    #     reshaped_lhs.append(_rlhs)
+    #
+    # texts_token_emb = []  # Shape: num_words * 768
+    # for tte in reshaped_lhs:
+    #     _tte = []
+    #     for i in tte:
+    #         emb = tf.reduce_sum(i[-4:], axis=0)
+    #         _tte.append(emb)
+    #     texts_token_emb.append(np.array(_tte[1:-1]))
+    #
+    # texts_matrix = []
+    # for te in texts_token_emb:
+    #     emb = np.zeros((75-2, 768))
+    #     for i in range(len(te)):
+    #         emb[i] = te[i]
+    #     texts_matrix.append(emb)
+    #
+    # # with open(r"H:\DS&KT Lab\NCKH\Aquaman\data\data_mebe\mebeshopee_train_phobert.pkl", 'wb') as pf:
+    # with open(r"H:\DS&KT Lab\NCKH\Aquaman\data\data_mebe\mebeshopee_test_phobert.pkl", 'wb') as pf:
+    #     pickle.dump(texts_matrix, pf, protocol=pickle.HIGHEST_PROTOCOL)
 
-
-
-
-
-
-
-
+    return inp, outp #, max_dim    #, vocab

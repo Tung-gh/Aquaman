@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from prettytable import PrettyTable
 
 
@@ -58,5 +60,15 @@ def cal_aspect_prf(goldens, predicts, history, num_aspects, verbal=False):
         table.add_row(r)
         table.add_row(f1)
         print(table)
+
+        for i in range(num_aspects):
+            plt.plot(history[i].history['loss'])
+            plt.plot(history[i].history['val_loss'])
+            plt.title(categories[i+1] + '- model loss')
+            plt.ylabel('loss')
+            plt.xlabel('epoch')
+            plt.legend(['train', 'val'], loc='lower left')
+            plt.show()
+
 
     return p, r, f1, (micro_p, micro_r, micro_f1), (macro_p, macro_r, macro_f1)
